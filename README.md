@@ -32,6 +32,15 @@ Cookies grant access to your account. Keep the file private, and re-export it wh
 2. Upload `cookies.txt` with MeTube's cookie upload button (it is stored in `STATE_DIR`).
 3. Restart MeTube and paste a Threads URL.
 
+Public posts work without cookies. MeTube ignores a `cookies.txt` inside the plugin folder; only the uploaded file is used.
+
+To run yt-dlp by hand inside the container, copy the cookies to a writable path first. yt-dlp writes the cookie file back on exit, and the `:ro` mount makes it fail with `OSError: [Errno 30] Read-only file system`:
+
+```bash
+docker exec metube sh -c 'cp /etc/yt-dlp/plugins/threads/cookies.txt /tmp/c.txt &&
+  yt-dlp --cookies /tmp/c.txt --simulate https://www.threads.com/share/I5GPDH3O5; rm -f /tmp/c.txt'
+```
+
 ## Use with the yt-dlp CLI
 
 ```bash
