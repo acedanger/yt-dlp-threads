@@ -15,6 +15,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / 'tests' / 'fixtures' / 'post.html'
+LINKED_FIXTURE = ROOT / 'tests' / 'fixtures' / 'linked_post.html'
 LIVE_URL = os.environ.get('THREADS_TEST_URL', 'https://www.threads.com/share/I5GPDH3O5')
 
 sys.path.insert(0, str(ROOT))
@@ -62,6 +63,29 @@ def test_parses_post_from_page_json():
         'https://scontent.cdninstagram.com/v/fixture_480.mp4',
     }
     assert entry['http_headers']['Referer'] == 'https://www.threads.com/'
+
+
+def test_post_with_own_video_is_its_own_media_source():
+    from yt_dlp import YoutubeDL
+    from yt_dlp_plugins.extractor.threads import ThreadsIE
+
+    ie = ThreadsIE(YoutubeDL({'quiet': True}))
+    post = ie._pick_post(FIXTURE.read_text(), 'Cxd59tZLMrd')
+    assert ie._media_source(post) is post
+
+
+def test_text_post_uses_linked_inline_video():
+    from yt_dlp import YoutubeDL
+    from yt_dlp_plugins.extractor.threads import ThreadsIE
+
+    ie = ThreadsIE(YoutubeDL({'quiet': True}))
+    post = ie._pick_post(LINKED_FIXTURE.read_text(), 'DgOCffSkoRD')
+    assert post['code'] == 'DgOCffSkoRD'
+
+    media = ie._media_source(post)
+    assert media['code'] == 'Dff5vj7P3w9'
+    entry = ie._media_entry(media, {'id': 'DgOCffSkoRD'})
+    assert {f['url'] for f in entry['formats']} == {'https://scontent.cdninstagram.com/v/linked_1080.mp4'}
 
 
 def test_live_share_url():

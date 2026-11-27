@@ -61,6 +61,20 @@ class ThreadsIE(InstagramBaseIE):
                     return post
         return posts[0] if posts else None
 
+    @staticmethod
+    def _media_source(post):
+        """Return the dict holding the post's video: the post itself, or media it embeds from another post."""
+        def has_video(media):
+            return bool(media.get('video_versions') or traverse_obj(media, ('carousel_media', ..., 'video_versions')))
+
+        if has_video(post):
+            return post
+        # Text posts (media_type 19) that embed another post's reel keep the video here
+        linked = traverse_obj(post, ('text_post_app_info', 'linked_inline_media', {dict}))
+        if linked and has_video(linked):
+            return linked
+        return post
+
     def _media_entry(self, media, info):
         entry = {**info, **self._extract_product_media(media)}
         entry['http_headers'] = {'Referer': self._BASE_URL}
@@ -101,7 +115,8 @@ class ThreadsIE(InstagramBaseIE):
             }),
         }
 
-        carousel = [m for m in traverse_obj(post, ('carousel_media', ..., {dict})) if m.get('video_versions')]
+        media = self._media_source(post)
+        carousel = [m for m in traverse_obj(media, ('carousel_media', ..., {dict})) if m.get('video_versions')]
         if carousel:
             entries = []
             for idx, media in enumerate(carousel, start=1):
@@ -112,9 +127,9 @@ class ThreadsIE(InstagramBaseIE):
                 return {**entries[0], 'id': code}
             return self.playlist_result(entries, code, info.get('title'), info.get('description'))
 
-        if not post.get('video_versions'):
+        if not media.get('video_versions'):
             raise ExtractorError('This Threads post has no video', expected=True)
 
-        entry = self._media_entry(post, info)
+        entry = self._media_entry(media, info)
         entry['id'] = code
         return entry

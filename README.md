@@ -55,4 +55,5 @@ THREADS_COOKIES=cookies.txt uv run pytest tests/       # adds the live test
 ## Limitations
 
 - Video only. Image-only posts report "This Threads post has no video".
+- Text posts that embed another post's video download that embedded video, with the outer post's caption and author.
 - The extractor reads post data embedded in the page. If Threads stops embedding it for logged-in users, extraction breaks.
